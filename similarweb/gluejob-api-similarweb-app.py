@@ -10,10 +10,6 @@ import config
 
 class SimilarWebApp:
     
-    api_key = "400142dabb994cfe937713f5eafd93a5"
-    data_types = {'daily_active_users': 'dau', 'monthly_active_users': 'mau', 'downloads': 'downloads'}
-    url = "https://api.similarweb.com/v1/app/Google/{app_id}/engagement/{data_type}?api_key={api_key}&start_date={start_date}&end_date={end_date}&country=us&granularity={granularity}&format=json"
-    
     def __init__(self, client_name, app_id, data_type, granularity, start_month, end_month, app_os = "Google") -> None:
         self.client_name = client_name
         self.app_id = app_id
