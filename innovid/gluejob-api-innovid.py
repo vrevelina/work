@@ -9,6 +9,8 @@ from pathlib import Path
 from zipfile import ZipFile
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from awsglue.utils import getResolvedOptions
 import config
 
 def get_start_end_dates(end_date=None, days_back=None):
@@ -25,14 +27,22 @@ def get_start_end_dates(end_date=None, days_back=None):
     s_str = s_date.strftime('%Y-%m-%d')
     return s_str, e_str
 
+def get_end_date():
+    end_date = datetime.now() + relativedelta(days=-1)
+    return end_date.strftime("%Y-%m-%d")
+
+def get_start_date(end_date: str):
+    start_date = datetime.strptime(end_date, "%Y-%m-%d") + relativedelta(days=-4)
+    return start_date.strftime("%Y-%m-%d")
+
 class Innovid:
     """ Class for representing Innovid Reports """
 
     def __init__(
             self,
             client_name,
-            end_date = None,
-            days_back = None):
+            start_date = None,
+            end_date = None):
 
         """Constructor for Innovid Report.
 
@@ -43,7 +53,8 @@ class Innovid:
 
         """
         self.client_name = client_name
-        self.start_date, self.end_date = get_start_end_dates(end_date, days_back)
+        self.start_date = start_date
+        self.end_date = end_date
         self.report_url = None
         self.df = pd.DataFrame()
         self.file_name = destfname
@@ -122,17 +133,10 @@ class Innovid:
             # get zipped folder inside the url
             r = requests.get(self.report_url)
             temp = ZipFile(io.BytesIO(r.content))
-            self.df = pd.read_csv(temp.open(temp.namelist()[0]))
-            # df = df[['Date', 'Campaign Name', 'Publisher Name', 'Placement Name', 'Impressions', 'ClickThrough', '25%', '50%', '75%', '100%']]
-            # df.rename(columns={"25%": "Video First Quartile Completions", "50%": "Video Second Quartile Completions", "75%": "Video Third Quartile Completions", "100%": "Video Fully Played"}, inplace=True)
-            # df.rename(columns=lambda x: x.replace(" ", "_"), inplace=True)
-            # df = df.groupby(['Date', 'Campaign_Name', 'Publisher_Name', 'Placement_Name'])[["Impressions", "ClickThrough", "Video_First_Quartile_Completions", "Video_Second_Quartile_Completions", "Video_Third_Quartile_Completions", "Video_Fully_Played"]].sum().reset_index()
-
-            # self.df = df.copy()
-
             time_elapsed = time.time()-start_time
 
-            print('Report has been saved to:\n{}.\nTime elapsed: {} minute(s).'.format(self.destpath, round(time_elapsed/60, 2)))
+            print('Time elapsed: {round(time_elapsed/60, 2)} minute(s).')
+            return pd.read_csv(temp.open(temp.namelist()[0]))
 
     def save_report(self):
         csv_buffer = io.StringIO()
@@ -145,8 +149,49 @@ class Innovid:
         
         print("Raw report is saved.")
 
-if __name__ == '__main__':
-    innovid = Innovid(client_name="Mercury Insurance")
-    innovid.get_report()
-    innovid.save_report()
+def _save_data(df, bucket, destpath, destfname):
+    csv_buffer = io.StringIO()
+    df.to_csv(csv_buffer, sep=",", index=False)
+    s3 = boto3.resource('s3')
+    s3_obj = s3.Object(bucket, destpath+destfname)
+    s3_obj.put(Body=csv_buffer.getvalue())
+    print("Data has been saved.")
+
+def _get_params(args):
+    params = {}
+    params['client_name'] = args['Client']
+    params['start_date'] = args['StartDate']
+    params['end_date'] = args['EndDate']
+    params['bucket'] = config.s3["bucket"]
+    params['destpath'] = config.s3["destpath"].format(client_name=args['Client'])
+    params['destfname'] = config.s3["destfname"].format(run_datetime=datetime.now(), client_name=args['Client'])
+    return params
+
+class JobError(Exception):
+    def __init__(self, error, **kwargs):
+        super().__init__(error)
+        self.error_type = type(error).__name__
+        self._kwargs = kwargs
+        
+    def __str__(self):
+        kwargs = ", ".join(str(k) + " = " + str(v) for k, v in self._kwargs.items())
+        return f"{self.error_type}: {super().__str__()} || {kwargs}"
+
+if __name__ == "__main__":
+    try:
+        args = getResolvedOptions(sys.argv, ['Client', 'StartDate', 'EndDate'])
+        
+        if args['EndDate'] == "None":
+            args['EndDate'] = get_end_date()
+        if args['StartDate'] == "None":
+            args['StartDate'] = get_start_date(args['EndDate'])
+        
+        params = _get_params(args)
+
+        innovid = Innovid(client_name=params['client_name'], start_date=params['start_date'], end_date=params['end_date'])
+        df = innovid.get_report()
+        _save_data(df, params['bucket'], params['destpath'], params['destfname'])
+
+    except Exception as e:
+        raise JobError(e, Job_Arguments = args)
 
