@@ -12,28 +12,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from awsglue.utils import getResolvedOptions
 import config
-
-def get_start_end_dates(end_date=None, days_back=None):
-    if end_date is None:
-        e_date = datetime.today() - timedelta(1)
-        e_str = e_date.strftime('%Y-%m-%d')
-    else:
-        e_date = datetime.strptime(end_date, '%Y-%m-%d')
-        e_str = end_date
-        
-    if days_back is None:
-        days_back = 4
-    s_date = e_date - timedelta(days_back)
-    s_str = s_date.strftime('%Y-%m-%d')
-    return s_str, e_str
-
-def get_end_date():
-    end_date = datetime.now() + relativedelta(days=-1)
-    return end_date.strftime("%Y-%m-%d")
-
-def get_start_date(end_date: str):
-    start_date = datetime.strptime(end_date, "%Y-%m-%d") + relativedelta(days=-4)
-    return start_date.strftime("%Y-%m-%d")
+import sys
 
 class Innovid:
     """ Class for representing Innovid Reports """
@@ -55,10 +34,9 @@ class Innovid:
         self.client_name = client_name
         self.start_date = start_date
         self.end_date = end_date
+        self.user_email = config.credentials['user_email']
+        self.user_password = config.credentials['user_password']
         self.report_url = None
-        self.df = pd.DataFrame()
-        self.file_name = destfname
-        self.destpath = config.s3['destpath'].format(client_name=client_name)
 
     def request_report(self):
         """Used to request the report.
@@ -73,12 +51,12 @@ class Innovid:
 
         # at this point, the report is being requested
         try:
-            r = requests.get(token_req_url, auth=HTTPBasicAuth(user_email, user_password))
+            r = requests.get(token_req_url, auth=HTTPBasicAuth(self.user_email, self.user_password))
             rs_token = json.loads(r.text)['data']['reportStatusToken']
 
             print('The report has been requested.')
         except:
-            raise Exception(requests.get(token_req_url, auth=HTTPBasicAuth(user_email, user_password)).text)
+            raise Exception(requests.get(token_req_url, auth=HTTPBasicAuth(self.user_email, self.user_password)).text)
 
         return rs_token
 
@@ -91,7 +69,7 @@ class Innovid:
 
         """
         req_url = config.request['statusURL'].format(token = status_token)
-        req_data = json.loads(requests.get(req_url, auth=HTTPBasicAuth(user_email, user_password)).text)['data']
+        req_data = json.loads(requests.get(req_url, auth=HTTPBasicAuth(self.user_email, self.user_password)).text)['data']
 
         report_status = req_data['reportStatus']
 
@@ -138,24 +116,21 @@ class Innovid:
             print('Time elapsed: {round(time_elapsed/60, 2)} minute(s).')
             return pd.read_csv(temp.open(temp.namelist()[0]))
 
-    def save_report(self):
-        csv_buffer = io.StringIO()
-        self.df.to_csv(csv_buffer, sep = ",", index=False)
-        s3 = boto3.resource('s3')
-        fname = config.s3['destfname'].format(run_datetime=datetime.now(), client_name=self.client_name)
-        s3_obj = s3.Object(config.s3['bucket'], self.destpath + '/' + fname)
-        
-        s3_obj.put(Body=csv_buffer.getvalue())
-        
-        print("Raw report is saved.")
-
-def _save_data(df, bucket, destpath, destfname):
+def save_report(df, bucket, destpath, destfname):
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, sep=",", index=False)
+    df.to_csv(csv_buffer, sep = ",", index=False)
     s3 = boto3.resource('s3')
     s3_obj = s3.Object(bucket, destpath+destfname)
     s3_obj.put(Body=csv_buffer.getvalue())
     print("Data has been saved.")
+
+def get_end_date():
+    end_date = datetime.now() + relativedelta(days=-1)
+    return end_date.strftime("%Y-%m-%d")
+
+def get_start_date(end_date: str):
+    start_date = datetime.strptime(end_date, "%Y-%m-%d") + relativedelta(days=-4)
+    return start_date.strftime("%Y-%m-%d")
 
 def _get_params(args):
     params = {}
@@ -190,7 +165,7 @@ if __name__ == "__main__":
 
         innovid = Innovid(client_name=params['client_name'], start_date=params['start_date'], end_date=params['end_date'])
         df = innovid.get_report()
-        _save_data(df, params['bucket'], params['destpath'], params['destfname'])
+        save_report(df, params['bucket'], params['destpath'], params['destfname'])
 
     except Exception as e:
         raise JobError(e, Job_Arguments = args)
