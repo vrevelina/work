@@ -11,8 +11,10 @@ from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from awsglue.utils import getResolvedOptions
-import config
 import sys
+from config import innovid
+import utils
+from utils import JobError
 
 class Innovid:
     """ Class for representing Innovid Reports """
@@ -34,8 +36,8 @@ class Innovid:
         self.client_name = client_name
         self.start_date = start_date
         self.end_date = end_date
-        self.user_email = config.credentials['user_email']
-        self.user_password = config.credentials['user_password']
+        self.user_email = innovid['credentials']['user_email']
+        self.user_password = innovid['credentials']['user_password']
         self.report_url = None
 
     def request_report(self):
@@ -47,7 +49,7 @@ class Innovid:
 
         """
 
-        token_req_url = config.request['tokenURL'].format(client_id=config.credentials['client_id'][self.client_name], advertiser_id=config.credentials['advertiser_id'], start_date=self.start_date, end_date=self.end_date)
+        token_req_url = innovid['request']['tokenURL'].format(client_id=innovid['credentials']['client_id'][self.client_name], advertiser_id=innovid['credentials']['advertiser_id'], start_date=self.start_date, end_date=self.end_date)
 
         # at this point, the report is being requested
         try:
@@ -68,7 +70,7 @@ class Innovid:
         READY (report is ready).
 
         """
-        req_url = config.request['statusURL'].format(token = status_token)
+        req_url = innovid['request']['statusURL'].format(token = status_token)
         req_data = json.loads(requests.get(req_url, auth=HTTPBasicAuth(self.user_email, self.user_password)).text)['data']
 
         report_status = req_data['reportStatus']
@@ -116,56 +118,20 @@ class Innovid:
             print('Time elapsed: {round(time_elapsed/60, 2)} minute(s).')
             return pd.read_csv(temp.open(temp.namelist()[0]))
 
-def save_report(df, bucket, destpath, destfname):
-    csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, sep = ",", index=False)
-    s3 = boto3.resource('s3')
-    s3_obj = s3.Object(bucket, destpath+destfname)
-    s3_obj.put(Body=csv_buffer.getvalue())
-    print("Data has been saved.")
-
-def get_end_date():
-    end_date = datetime.now() + relativedelta(days=-1)
-    return end_date.strftime("%Y-%m-%d")
-
-def get_start_date(end_date: str):
-    start_date = datetime.strptime(end_date, "%Y-%m-%d") + relativedelta(days=-4)
-    return start_date.strftime("%Y-%m-%d")
-
-def _get_params(args):
-    params = {}
-    params['client_name'] = args['Client']
-    params['start_date'] = args['StartDate']
-    params['end_date'] = args['EndDate']
-    params['bucket'] = config.s3["bucket"]
-    params['destpath'] = config.s3["destpath"].format(client_name=args['Client'])
-    params['destfname'] = config.s3["destfname"].format(run_datetime=datetime.now(), client_name=args['Client'])
-    return params
-
-class JobError(Exception):
-    def __init__(self, error, **kwargs):
-        super().__init__(error)
-        self.error_type = type(error).__name__
-        self._kwargs = kwargs
-        
-    def __str__(self):
-        kwargs = ", ".join(str(k) + " = " + str(v) for k, v in self._kwargs.items())
-        return f"{self.error_type}: {super().__str__()} || {kwargs}"
-
 if __name__ == "__main__":
     try:
         args = getResolvedOptions(sys.argv, ['Client', 'StartDate', 'EndDate'])
         
         if args['EndDate'] == "None":
-            args['EndDate'] = get_end_date()
+            args['EndDate'] = utils.get_end_date()
         if args['StartDate'] == "None":
-            args['StartDate'] = get_start_date(args['EndDate'])
+            args['StartDate'] = utils.get_start_date(args['EndDate'], 'innovid')
         
-        params = _get_params(args)
+        params = utils.get_params(args, 'innovid')
 
-        innovid = Innovid(client_name=params['client_name'], start_date=params['start_date'], end_date=params['end_date'])
-        df = innovid.get_report()
-        save_report(df, params['bucket'], params['destpath'], params['destfname'])
+        rep = Innovid(client_name=params['client_name'], start_date=params['start_date'], end_date=params['end_date'])
+        df = rep.get_report()
+        utils.save_data(df, params['bucket'], params['destpath'], params['destfname'])
 
     except Exception as e:
         raise JobError(e, Job_Arguments = args)
