@@ -132,4 +132,4 @@ dmypy.json
 config.py
 .vscode/
 QueryReport/*
-!QueryReport/QueryReport.py
+!QueryReport/*QueryReport.py
