@@ -1,12 +1,8 @@
-from pickle import LIST
 from pytrends.request import TrendReq
 from datetime import datetime
 import pandas as pd
 from GoogleTrends import utils
 from GoogleTrends.datehandler import datehandler
-
-# from datehandler import datehandler
-# import utils
 
 
 class GoogleTrends:
@@ -18,7 +14,6 @@ class GoogleTrends:
 
     Please see below for more details:
     == Granularity returned by Google Trends || Length of date range
-    -> Hourly || 1-4 hours
     -> Daily || 1-269 days
     -> Weekly || 270 days - 269 weeks
     -> Monthly || >= 270 weeks
