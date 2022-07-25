@@ -19,7 +19,7 @@ class GoogleTrends:
     Please see below for more details:
     == Granularity returned by Google Trends || Length of date range
     -> Hourly || 1-4 hours
-    -> Daily || 1-7 days
+    -> Daily || 1-269 days
     -> Weekly || 270 days - 269 weeks
     -> Monthly || >= 270 weeks
 
