@@ -16,14 +16,11 @@ from config import innovid
 import utils
 from utils import JobError
 
-class Innovid:
-    """ Class for representing Innovid Reports """
 
-    def __init__(
-            self,
-            client_name,
-            start_date = None,
-            end_date = None):
+class Innovid:
+    """Class for representing Innovid Reports"""
+
+    def __init__(self, client_name, start_date=None, end_date=None):
 
         """Constructor for Innovid Report.
 
@@ -36,29 +33,41 @@ class Innovid:
         self.client_name = client_name
         self.start_date = start_date
         self.end_date = end_date
-        self.user_email = innovid['credentials']['user_email']
-        self.user_password = innovid['credentials']['user_password']
+        self.user_email = innovid["credentials"]["user_email"]
+        self.user_password = innovid["credentials"]["user_password"]
         self.report_url = None
 
     def request_report(self):
         """Used to request the report.
 
-            This function will use a get request using a predetermined report URL with start date and end date as specified
-            in the constructor. After it has successfully requested the report, a status token will be assigned into the
-            constructor as an attribute.
+        This function will use a get request using a predetermined report URL with start date and end date as specified
+        in the constructor. After it has successfully requested the report, a status token will be assigned into the
+        constructor as an attribute.
 
         """
 
-        token_req_url = innovid['request']['tokenURL'].format(client_id=innovid['credentials']['client_id'][self.client_name], advertiser_id=innovid['credentials']['advertiser_id'], start_date=self.start_date, end_date=self.end_date)
+        token_req_url = innovid["request"]["tokenURL"].format(
+            client_id=innovid["credentials"]["client_id"][self.client_name],
+            advertiser_id=innovid["credentials"]["advertiser_id"],
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
 
         # at this point, the report is being requested
         try:
-            r = requests.get(token_req_url, auth=HTTPBasicAuth(self.user_email, self.user_password))
-            rs_token = json.loads(r.text)['data']['reportStatusToken']
+            r = requests.get(
+                token_req_url, auth=HTTPBasicAuth(self.user_email, self.user_password)
+            )
+            rs_token = json.loads(r.text)["data"]["reportStatusToken"]
 
-            print('The report has been requested.')
+            print("The report has been requested.")
         except:
-            raise Exception(requests.get(token_req_url, auth=HTTPBasicAuth(self.user_email, self.user_password)).text)
+            raise Exception(
+                requests.get(
+                    token_req_url,
+                    auth=HTTPBasicAuth(self.user_email, self.user_password),
+                ).text
+            )
 
         return rs_token
 
@@ -70,23 +79,27 @@ class Innovid:
         READY (report is ready).
 
         """
-        req_url = innovid['request']['statusURL'].format(token = status_token)
-        req_data = json.loads(requests.get(req_url, auth=HTTPBasicAuth(self.user_email, self.user_password)).text)['data']
+        req_url = innovid["request"]["statusURL"].format(token=status_token)
+        req_data = json.loads(
+            requests.get(
+                req_url, auth=HTTPBasicAuth(self.user_email, self.user_password)
+            ).text
+        )["data"]
 
-        report_status = req_data['reportStatus']
+        report_status = req_data["reportStatus"]
 
-        if report_status == 'IN_PROCESS':
-            print('Report is not ready yet.')
-        elif report_status == 'FAIL':
-            print('Report request has failed.')
-        elif report_status == 'READY':
-            self.report_url = req_data['reportUrl']
-            print('Report is ready')
+        if report_status == "IN_PROCESS":
+            print("Report is not ready yet.")
+        elif report_status == "FAIL":
+            print("Report request has failed.")
+        elif report_status == "READY":
+            self.report_url = req_data["reportUrl"]
+            print("Report is ready")
 
     def get_report(self):
         """Used to request the report.
 
-            This function will get the report and save it into a local folder. Exact location will be printed after the function has finished running.
+        This function will get the report and save it into a local folder. Exact location will be printed after the function has finished running.
 
         """
 
@@ -100,39 +113,47 @@ class Innovid:
         self.check_report_status(rs_token)
         while self.report_url is None:
             time.sleep(60)
-            time_elapsed = time.time()-start_time
+            time_elapsed = time.time() - start_time
             self.check_report_status(rs_token)
-            if time_elapsed>1800:
+            if time_elapsed > 1800:
                 print("Failed to get the report after 30 minutes.")
                 break
-            elif round(time_elapsed/60)%3==0:
-                print("Still getting the report...\nCurrent time: {}.\nTime elapsed: {} minutes".format(time.ctime(), round(time_elapsed/60)))
+            elif round(time_elapsed / 60) % 3 == 0:
+                print(
+                    "Still getting the report...\nCurrent time: {}.\nTime elapsed: {} minutes".format(
+                        time.ctime(), round(time_elapsed / 60)
+                    )
+                )
 
         # if report is ready before 30 minutes is up:
         else:
             # get zipped folder inside the url
             r = requests.get(self.report_url)
             temp = ZipFile(io.BytesIO(r.content))
-            time_elapsed = time.time()-start_time
+            time_elapsed = time.time() - start_time
 
-            print('Time elapsed: {round(time_elapsed/60, 2)} minute(s).')
+            print("Time elapsed: {round(time_elapsed/60, 2)} minute(s).")
             return pd.read_csv(temp.open(temp.namelist()[0]))
+
 
 if __name__ == "__main__":
     try:
-        args = getResolvedOptions(sys.argv, ['Client', 'StartDate', 'EndDate'])
-        
-        if args['EndDate'] == "None":
-            args['EndDate'] = utils.get_end_date()
-        if args['StartDate'] == "None":
-            args['StartDate'] = utils.get_start_date(args['EndDate'], 'innovid')
-        
-        params = utils.get_params(args, 'innovid')
+        args = getResolvedOptions(sys.argv, ["Client", "StartDate", "EndDate"])
 
-        rep = Innovid(client_name=params['client_name'], start_date=params['start_date'], end_date=params['end_date'])
+        if args["EndDate"] == "None":
+            args["EndDate"] = utils.get_end_date()
+        if args["StartDate"] == "None":
+            args["StartDate"] = utils.get_start_date(args["EndDate"], "innovid")
+
+        params = utils.get_params(args, "innovid")
+
+        rep = Innovid(
+            client_name=params["client_name"],
+            start_date=params["start_date"],
+            end_date=params["end_date"],
+        )
         df = rep.get_report()
-        utils.save_data(df, params['bucket'], params['destpath'], params['destfname'])
+        utils.save_data(df, params["bucket"], params["destpath"], params["destfname"])
 
     except Exception as e:
-        raise JobError(e, Job_Arguments = args)
-
+        raise JobError(e, Job_Arguments=args)
