@@ -6,19 +6,7 @@ from GoogleTrends.datehandler import datehandler
 
 
 class GoogleTrends:
-    """Class to pull Google Trends data
-
-    Code will make much more sense knowing below:
-    Google Trends data has several granularity options.
-    Using pytrends to pull these data, the granularity returned from the request will depend on the date range given.
-
-    Please see below for more details:
-    == Granularity returned by Google Trends || Length of date range
-    -> Daily || 1-269 days
-    -> Weekly || 270 days - 269 weeks
-    -> Monthly || >= 270 weeks
-
-    """
+    """Class to pull Google Trends data"""
 
     def __init__(
         self,

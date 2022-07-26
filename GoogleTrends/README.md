@@ -9,3 +9,4 @@ Some things worth knowing before you read this class:
 | Daily                | 1-269 days                    |
 | Weekly               | 270 days - 269 weeks          |
 | Monthly              | \> 269 weeks                  |
+- I didn't include the option to pull hourly data because we don't need it for our use case. But [pytrends](https://github.com/GeneralMills/pytrends) and Google Trends themselves do have the option to pull hourly data.
