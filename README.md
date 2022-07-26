@@ -2,7 +2,7 @@
 
 **This repo is still constantly evolving.**
 
-Compilation of ETL scripts I wrote for work, sensitive data have been excluded/ignored.
+Compilation of ETL scripts I wrote.
 
 ## API Scripts
 The following ETL scripts were stored in AWS Glue to pull data from their APIs.
