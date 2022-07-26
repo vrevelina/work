@@ -12,8 +12,8 @@ class GoogleTrends:
         self,
         client_name,
         keywords,
-        end_date="None",
-        start_date="None",
+        end_date=None,
+        start_date=None,
         freq="weekly",
         region="US",
     ):
@@ -128,6 +128,17 @@ class GoogleTrends:
         return self.normalize_to_100(df)
 
     def get_avg(self, df):
+        """Gets the avg values of the Google Trends data.
+
+        This is used in the case when we'd like less granularity than what is given by the Google Trends API.
+        e.g. Weekly data for a date range < 270 days
+
+        Args:
+            df (pd.DataFrame): Raw data from Google Trends.
+
+        Returns:
+            pd.DataFrame: Data averaged to the desired granularity.
+        """
         idx_name = df.index.name
         df.reset_index(inplace=True)
         if self.frequency == "weekly":
