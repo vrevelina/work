@@ -47,7 +47,7 @@ class datehandler:
         (2) If it's monthly, we'd want the start date to fall on the first of month.
 
         Returns:
-            _type_: _description_
+            datetime: default start date.
         """
         if self.freq == "daily":
             return self.end_date - relativedelta(years=1)
