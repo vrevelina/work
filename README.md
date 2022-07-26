@@ -1,6 +1,7 @@
 # Work
 
 **This repo is still constantly evolving.**
+
 Compilation of ETL scripts I wrote for work, sensitive data have been excluded/ignored.
 
 ## API Scripts
@@ -14,4 +15,4 @@ The following ETL scripts were stored in AWS Glue to pull data from their APIs.
 Pulls data from Google Trends. Google Trends does not have an official API at the time of writing, I used [pytrends](https://pypi.org/project/pytrends/) to request the Google Trends data.
 
 ## QueryReport
-Class I created to create CSV reports from data queried from AWS Athena databases. The implementation of this class includes sending the report into a sharepoint folder.
+Class I created to create CSV reports from data queried from AWS Athena databases. The implementation of this class includes sending the report into a SharePoint folder.
