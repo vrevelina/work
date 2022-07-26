@@ -1,7 +1,7 @@
 # QueryReport
 Python class.
-Pulls data with a given query from AWS Athena database(s).
-Query results are still saved into S3.
+Pulls data with a given query from [AWS Athena](https://aws.amazon.com/athena) database(s).
+Query results are still saved into [S3](https://aws.amazon.com/s3/).
 
 # gluejob-QueryReport.py
 Implementation of the QueryReport class, this was written in [AWS Glue Job](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-python.html).
