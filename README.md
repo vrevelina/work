@@ -1,6 +1,6 @@
 # Work
 
-**This repo is still constantly evolving.**
+**This repo is still evolving.**
 
 Compilation of ETL scripts I wrote.
 
