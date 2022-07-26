@@ -18,8 +18,8 @@ class QueryReport:
         params = {
             "region": config.access["region"],
             "database": self.db_name,
-            "bucket": "005-datalake",
-            "path": "query",
+            "bucket": config.access["bucket"],
+            "path": config.access["path"],
             "query": self.query,
         }
         self.params = params
@@ -31,7 +31,7 @@ class QueryReport:
             aws_secret_access_key=config.access["secret"],
             region_name=config.access["region"],
         )
-        self.aws_path, self.df = query_results(session, self.params)
+        self.aws_path, self.df = utils.query_results(session, self.params)
         print("AWS Data Path: ", self.aws_path)
 
     def get_fname(self, start_date, end_date):
